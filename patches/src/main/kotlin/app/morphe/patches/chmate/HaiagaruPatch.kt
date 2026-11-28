@@ -1696,6 +1696,8 @@ private val haiagaruBytecodePatch = bytecodePatch {
 
     execute {
         val profile = profileFor(packageMetadata.versionName)
+        // 設定画面の入口は本体に常時含める（旧: テーマ・見た目・設定まわり）
+        patchInlineSettingsEntry(packageMetadata.versionName)
 
 
         if (packageMetadata.versionName == "0.8.10.191 dev") {
