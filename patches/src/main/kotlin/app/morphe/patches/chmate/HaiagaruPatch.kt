@@ -1704,6 +1704,7 @@ private val haiagaruBytecodePatch = bytecodePatch {
             patchNativeRestore191()
             patchConsumedPopupMenu191()
             patchSearchThreadForwardToTablet191()
+            patchLegacy191PostIntervalRestriction()
         }
         if (packageMetadata.versionName == "0.8.10.226 dev") {
             patchExternalBrowserLongPress226()
@@ -8706,6 +8707,24 @@ private fun app.morphe.patcher.patch.BytecodePatchContext.patchLegacy191PostPref
         """.trimIndent(),
         ExternalLabel("haiagaru_stock_191_post_preflight", firstInstruction),
     )
+}
+
+private fun app.morphe.patcher.patch.BytecodePatchContext.patchLegacy191PostIntervalRestriction() {
+    // ChMate 191 本体組み込みの連投規制: 投稿実行メソッド b() 内の規制判定
+    // (Boolean.booleanValue) の結果を直後に false へ固定し、規制キャンセルを無効化する。
+    val method = mutableClassDefBy("Lo/p9ExternalSyntheticLambda6;").methods.single { candidate ->
+        candidate.name == "b"
+            && candidate.returnType == "V"
+            && candidate.parameterTypes.isEmpty()
+    }
+    val instructions = method.implementation!!.instructions.toList()
+    val callIndex = instructions.indexOfFirst { instruction ->
+        val reference = (instruction as? ReferenceInstruction)?.reference as? MethodReference
+        reference?.definingClass == "Ljava/lang/Boolean;" && reference.name == "booleanValue"
+    }
+    check(callIndex >= 0) { "ChMate 191 post interval restriction was not found" }
+    val resultRegister = (instructions[callIndex + 1] as OneRegisterInstruction).registerA
+    method.addInstructions(callIndex + 2, "const/4 v$resultRegister, 0x0")
 }
 
 /** Hooks use stable parameter types; obfuscated owners are validated for each supported APK. */
